@@ -29,6 +29,6 @@ def depth_to_pcd(depth_map, intrinsic_func=default_intrinsics):
     points[:, :, 2] = depth_map
 
     pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.points = o3d.utility.Vector3dVector(points.reshape(-1, points.shape[2]))
 
     return pcd
