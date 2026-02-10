@@ -6,14 +6,19 @@ import torch
 from depth2metric.inference.utils import sharpen_image
 
 
-def get_MiDaS():
-    midas = torch.hub.load("intel-isl/MiDaS", "DPT_Hybrid")
+def get_MiDaS(model_name="DPT_Hybrid"):
+    """Load MiDaS model and related transforms."""
+    midas = torch.hub.load("intel-isl/MiDaS", model_name)
     midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
-    transform = midas_transforms.dpt_transform
+    if model_name == "DPT_Large" or model_name == "DPT_Hybrid":
+        transform = midas_transforms.dpt_transform
+    else:
+        transform = midas_transforms.small_transform
     return midas, transform
 
 
 def get_depth(model, original_image, tr_image):
+    """Get the model output and scale it using interpolation."""
     with torch.no_grad():
         prediction = model(tr_image)
 
@@ -29,6 +34,7 @@ def get_depth(model, original_image, tr_image):
 
 
 def get_final_depth(model, transforms, image):
+    """Get the final depth map possibly combining multiple outputs."""
     tr_image = transforms(image)
     orig_output = get_depth(model, image, tr_image)
 
