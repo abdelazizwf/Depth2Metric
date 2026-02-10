@@ -2,11 +2,12 @@
 
 import cv2
 import torch
+from ultralytics import YOLO
 
 from depth2metric.inference.utils import sharpen_image
 
 
-def get_MiDaS(model_name="DPT_Hybrid"):
+def get_midas(model_name="DPT_Hybrid"):
     """Load MiDaS model and related transforms."""
     midas = torch.hub.load("intel-isl/MiDaS", model_name)
     midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
@@ -15,6 +16,15 @@ def get_MiDaS(model_name="DPT_Hybrid"):
     else:
         transform = midas_transforms.small_transform
     return midas, transform
+
+
+def get_yolo(model_file="models/yolo26n.pt"):
+    return YOLO(model_file)
+
+
+def get_detections(model, image):
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    return model(image)[0]
 
 
 def get_depth(model, original_image, tr_image):
