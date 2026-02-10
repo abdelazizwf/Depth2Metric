@@ -2,19 +2,6 @@ import numpy as np
 import open3d as o3d
 
 
-def default_intrinsics(width, height):
-    """Basic intrinsics for pinhole camera."""
-    fx = fy = width
-    cx = width / 2
-    cy = height / 2
-    return {
-        "fx": fx,
-        "fy": fy,
-        "cx": cx,
-        "cy": cy
-    }
-
-
 def pixel_to_3d(u, v, depth, K):
     """Turn a 2D pixel to 3D camera coordinates."""
     X = (u - K["cx"]) * depth / K["fx"]
