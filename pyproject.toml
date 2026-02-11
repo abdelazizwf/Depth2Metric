@@ -1,6 +1,6 @@
 [project]
 name = "depth2metric"
-version = "0.0.1"
+version = "0.2.0"
 requires-python = ">=3.12"
 description = "Intelligent depth-based measurements from simple images."
 readme = "README.md"
