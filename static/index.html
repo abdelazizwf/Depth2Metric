@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DepthScale 3D Viewer</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.182.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.182.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+
+<div class="topbar">
+    <h2>Depth-Based 3D Measurement</h2>
+
+    <input type="file" id="imageInput" accept="image/*">
+    <button id="analyzeBtn">Analyze</button>
+    <span id="status"></span>
+
+    <div class="info">
+        <span>Right-click two points in 3D to measure distance</span>
+        <span id="distanceResult"></span>
+    </div>
+</div>
+
+<div id="viewer"></div>
+
+<script type="module" src="{{ url_for('static', path='script.js') }}"></script>
+
+</body>
+</html>

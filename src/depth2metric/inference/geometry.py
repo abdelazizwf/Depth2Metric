@@ -62,12 +62,12 @@ def distance_between_pixels(p1, p2, depth_map, K):
     return np.linalg.norm(P1 - P2)
 
 
-def scale_depth_map(depth_map, detections, K):
+def scale_depth_map(depth_map, detections, K, conf_threshold=0.5):
     scales = []
-    for box, cls in zip(detections.boxes.xyxy, detections.boxes.cls):
+    for box, cls, conf in zip(detections.boxes.xyxy, detections.boxes.cls, detections.boxes.conf):
         cls = cls.item()
 
-        if cls in PRIORS:
+        if cls in PRIORS and conf >= conf_threshold:
             x_min, y_min, x_max, y_max = box
             x_c = int((x_min + x_max) / 2)
             y_min, y_max = int(y_min), int(y_max)
