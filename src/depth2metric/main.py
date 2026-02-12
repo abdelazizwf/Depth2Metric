@@ -1,7 +1,6 @@
 import gzip
 from contextlib import asynccontextmanager
 
-import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -61,14 +60,12 @@ def analyze(request: Request, file: UploadFile):
 
     pcd = depth_pcd(
         file.file,
-        (request.state.midas, request.state.transforms),
+        request.state.midas,
+        request.state.transforms,
         request.state.yolo,
     )
 
-    points = np.asarray(pcd.points)
-    colors = (np.asarray(pcd.colors) * 255).astype(np.uint8)
-
-    result = gzip.compress(pack_pointcloud(points, colors))
+    result = gzip.compress(pack_pointcloud(pcd))
 
     return Response(
         result,

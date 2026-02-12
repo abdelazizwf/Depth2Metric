@@ -6,7 +6,7 @@ import numpy as np
 import open3d as o3d
 
 
-def sharpen_image(image):
+def sharpen_image(image: np.ndarray) -> np.ndarray:
     sharpen_kernel = np.array([
         [-1, -1, -1],
         [-1,  9, -1],
@@ -17,7 +17,11 @@ def sharpen_image(image):
     return sharpened
 
 
-def show_results(image, output, d_image=None):
+def show_results(
+    image: np.ndarray,
+    output: np.ndarray,
+    d_image: np.ndarray | None = None
+) -> None:
     axes_count = 3 if d_image is not None else 2
     _, axes = plt.subplots(1, axes_count, figsize=(10, 4))
 
@@ -35,11 +39,14 @@ def show_results(image, output, d_image=None):
     plt.show()
 
 
-def get_image_colors(image):
+def get_image_colors(image: np.ndarray) -> np.ndarray:
     return image.reshape(-1, image.shape[2]) / 255.0
 
 
-def visualize_pcd(pcd, colors=None):
+def visualize_pcd(
+    pcd: o3d.geometry.PointCloud,
+    colors: np.ndarray | None = None
+) -> None:
     if colors is not None:
         pcd.colors = o3d.utility.Vector3dVector(colors)
 

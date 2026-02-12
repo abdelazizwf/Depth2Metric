@@ -1,13 +1,17 @@
 # type: ignore
 
+from collections.abc import Callable
+
 import cv2
+import numpy as np
 import torch
 from ultralytics import YOLO
+from ultralytics.engine.results import Results
 
 from depth2metric.inference.utils import sharpen_image
 
 
-def get_midas(model_name="DPT_Hybrid"):
+def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:
     """Load MiDaS model and related transforms."""
     midas = torch.hub.load("intel-isl/MiDaS", model_name)
     midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
@@ -18,16 +22,19 @@ def get_midas(model_name="DPT_Hybrid"):
     return midas, transform
 
 
-def get_yolo(model_file="models/yolo26n.pt"):
+def get_yolo(model_file: str = "models/yolo26n.pt") -> YOLO:
     return YOLO(model_file)
 
 
-def get_detections(model, image):
+def get_detections(model: YOLO, image: np.ndarray) -> Results | None:
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    return model(image)[0]
+    results = model(image)
+    if len(results) == 0:
+        return None
+    return results[0]
 
 
-def get_depth(model, original_image, tr_image):
+def get_depth(model: Callable, original_image: np.ndarray, tr_image: np.ndarray) -> np.ndarray:
     """Get the model output and scale it using interpolation."""
     with torch.no_grad():
         prediction = model(tr_image)
@@ -43,7 +50,7 @@ def get_depth(model, original_image, tr_image):
     return output
 
 
-def get_final_depth(model, transforms, image):
+def get_depth_map(model: Callable, transforms: Callable, image: np.ndarray) -> np.ndarray:
     """Get the final depth map possibly combining multiple outputs."""
     tr_image = transforms(image)
     orig_output = get_depth(model, image, tr_image)
