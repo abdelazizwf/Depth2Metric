@@ -10,11 +10,12 @@ let selectedPoints = [];
 let measurementMarkers = [];
 let measurementLine = null;
 let measureAllowed = false;
+let localScale = 1;
+let dist;
 
 initScene();
 
 function initScene() {
-
     const container = document.getElementById("viewer");
 
     scene = new THREE.Scene();
@@ -85,6 +86,8 @@ function initScene() {
 
         if (intersects.length > 0) {
             const point = intersects[0].point.clone();
+            document.getElementById("correctMeasureBtn").disabled = true;
+            document.getElementById("correctMeasureNum").disabled = true;
 
             // If already measured, reset everything
             if (selectedPoints.length === 2) {
@@ -96,6 +99,8 @@ function initScene() {
 
             if (selectedPoints.length === 2) {
                 measureDistance();
+                document.getElementById("correctMeasureBtn").disabled = false;
+                document.getElementById("correctMeasureNum").disabled = false;
             }
         }
     });
@@ -109,6 +114,16 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+function updateLocalScale() {
+    const inp = document.getElementById("correctMeasureNum");
+    const newMeasure = inp.value;
+    if (inp.value === "") return;
+    localScale *= newMeasure / dist;
+    measureDistance(false);
+    inp.value = "";
+}
+
+document.getElementById("correctMeasureBtn").addEventListener("click", updateLocalScale);
 document.getElementById("analyzeBtn").addEventListener("click", uploadImage);
 
 async function uploadImage() {
@@ -152,6 +167,8 @@ async function uploadImage() {
     }
 
     clearMeasurement();
+    localScale = 1;
+
     document.getElementById("analyzeBtn").disabled = false;
     document.getElementById("status").innerText = "Done!";
 
@@ -236,7 +253,7 @@ function clearMeasurement() {
     document.getElementById("distanceResult").innerText = "";
 }
 
-function measureDistance() {
+function measureDistance(drawLine=true) {
     const p1 = selectedPoints[0];
     const p2 = selectedPoints[1];
 
@@ -244,29 +261,30 @@ function measureDistance() {
     const dy = p1.y - p2.y;
     const dz = p1.z - p2.z;
 
-    const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    dist = Math.sqrt(dx * dx + dy * dy + dz * dz) * localScale;
 
-    document.getElementById("distanceResult").innerText =
-        "Distance: " + dist.toFixed(3) + " Cm";
+    document.getElementById("distanceResult").innerText = dist.toFixed(1) + " Cm";
 
     // Create line
-    const geometry = new LineGeometry();
-    geometry.setPositions([
-        p1.x, p1.y, p1.z,
-        p2.x, p2.y, p2.z
-    ]);
+    if (drawLine) {
+        const geometry = new LineGeometry();
+        geometry.setPositions([
+            p1.x, p1.y, p1.z,
+            p2.x, p2.y, p2.z
+        ]);
 
-    const material = new LineMaterial({
-        color: 0xff0000,
-        linewidth: 3, // in pixels
-    });
+        const material = new LineMaterial({
+            color: 0xff0000,
+            linewidth: 3, // in pixels
+        });
 
-    material.resolution.set(window.innerWidth, window.innerHeight);
+        material.resolution.set(window.innerWidth, window.innerHeight);
 
-    measurementLine = new Line2(geometry, material);
-    measurementLine.computeLineDistances();
+        measurementLine = new Line2(geometry, material);
+        measurementLine.computeLineDistances();
 
-    scene.add(measurementLine);
+        scene.add(measurementLine);
+    }
 
     window.addEventListener("resize", () => {
         if (measurementLine) {

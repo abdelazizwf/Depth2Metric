@@ -9,6 +9,8 @@ body {
     padding: 10px;
     background: #1c1c1c;
     border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-evenly;
 }
 
 button {
@@ -31,4 +33,12 @@ button {
     margin-left: 15px;
     font-weight: bold;
     color: #4caf50;
+}
+
+#imageInputForm {
+    display: block;
+}
+
+#correctMeasureForm {
+    display: block;
 }

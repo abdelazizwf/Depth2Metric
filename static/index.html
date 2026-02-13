@@ -16,15 +16,22 @@
 <body>
 
 <div class="topbar">
-    <h2>Depth-Based 3D Measurement</h2>
+    <div id="imageInputForm">
+        <input type="file" id="imageInput" accept="image/*">
+        <button id="analyzeBtn">Analyze</button>
+        <span id="status"></span>
+    </div>
 
-    <input type="file" id="imageInput" accept="image/*">
-    <button id="analyzeBtn">Analyze</button>
-    <span id="status"></span>
 
     <div class="info">
         <span>Right-click two points in 3D to measure distance</span>
         <span id="distanceResult"></span>
+    </div>
+
+    <div id="correctMeasureForm">
+        <span>Wrong measurement? Update it to adjust the image scale: </span>
+        <input type="number" id="correctMeasureNum" disabled>
+        <button id="correctMeasureBtn" disabled>Update</button>
     </div>
 </div>
 
