@@ -19,9 +19,9 @@ services:
       - YOLO_CONFIG_DIR=/app/models
     labels:
       - traefik.enable=true
-      - traefik.http.routers.opinionlens-http.rule=Host(`depth2metric.abdelazizwf.dev`)
-      - traefik.http.routers.opinionlens-http.entrypoints=websecure
-      - traefik.http.routers.opinionlens-http.tls.certresolver=myresolver
+      - traefik.http.routers.depth2metric-http.rule=Host(`depth2metric.abdelazizwf.dev`)
+      - traefik.http.routers.depth2metric-http.entrypoints=websecure
+      - traefik.http.routers.depth2metric-http.tls.certresolver=myresolver
 
 networks:
   docker-net:
