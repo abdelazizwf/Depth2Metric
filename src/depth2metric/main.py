@@ -51,6 +51,7 @@ app.add_middleware(
 )
 
 static_files = StaticFiles(directory="static/")
+static_files.is_not_modified = lambda *args, **kwargs: False # Dirty hack to disable caching
 app.mount("/static", static_files, "static")
 
 jinja = Jinja2Templates("static/")
