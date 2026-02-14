@@ -1,0 +1,31 @@
+services:
+  depth2metric:
+    image: depth2metric
+    container_name: depth2metric
+    build:
+      context: .
+      dockerfile: Dockerfile
+    expose:
+      - 80
+    # ports:
+    #   - 8000:80
+    volumes:
+      - depth2metric_models:/app/models
+    networks:
+      - docker-net
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/app/models/torch
+      - YOLO_CONFIG_DIR=/app/models
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.opinionlens-http.rule=Host(`depth2metric.abdelazizwf.dev`)
+      - traefik.http.routers.opinionlens-http.entrypoints=websecure
+      - traefik.http.routers.opinionlens-http.tls.certresolver=myresolver
+
+networks:
+  docker-net:
+    external: true
+
+volumes:
+  depth2metric_models: {}

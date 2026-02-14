@@ -2,6 +2,7 @@ import gzip
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile
+from fastapi.middleware import cors, trustedhost
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -23,8 +24,31 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Depth2Metric",
     lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
+app.add_middleware(
+    cors.CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "http://depth2metric.docker-net",
+        "https://depth2metric.abdelazizwf.dev",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.add_middleware(
+    trustedhost.TrustedHostMiddleware,
+    allowed_hosts = [
+        "abdelazizwf.dev", "*.abdelazizwf.dev",
+        "localhost", "*.localhost",
+        "docker-net", "*.docker-net",
+    ]
+)
 
 static_files = StaticFiles(directory="static/")
 app.mount("/static", static_files, "static")
