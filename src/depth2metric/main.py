@@ -74,13 +74,17 @@ async def root(request: Request):
 @app.post("/analyze")
 def analyze(request: Request, file: UploadFile):
     mimes = ["image/png", "image/jpeg"]
-    if file.content_type not in mimes:
+    if file.size is None or file.content_type not in mimes:
         raise HTTPException(
             status_code=400,
             detail="Only PNG ('.png') or JPEG ('.jpg', '.jpeg') images are allowed."
         )
 
-    # print(file.size)
+    if file.size > (1024 * 1024 * 8):
+        raise HTTPException(
+            status_code=400,
+            detail="Image file is too big. Image size must be smaller that 8 MB."
+        )
 
     pcd = depth_pcd(
         file.file,
@@ -88,6 +92,8 @@ def analyze(request: Request, file: UploadFile):
         request.state.transforms,
         request.state.yolo,
     )
+
+    file.file.close()
 
     result = gzip.compress(pack_pointcloud(pcd))
 

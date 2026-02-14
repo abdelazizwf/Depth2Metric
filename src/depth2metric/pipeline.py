@@ -56,11 +56,10 @@ def depth_pcd(
     detections = get_detections(yolo, image)
     if detections is not None:
         scale = get_scale_from_detections(depth_map, detections, K)
-        print("Scale from priors.")
 
     if scale is None:
-        scale = get_scale_from_image_bottom(pcd_points)
-        print("Scale from image bottom.")
+        # scale = get_scale_from_image_bottom(pcd_points)
+        scale = 0.1 # Fallback for now
 
     depth_map *= scale
     pcd_points = get_pcd_points(depth_map, K)

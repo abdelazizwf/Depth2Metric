@@ -7,8 +7,6 @@ services:
       dockerfile: Dockerfile
     expose:
       - 80
-    # ports:
-    #   - 8000:80
     volumes:
       - depth2metric_models:/app/models
     networks:
@@ -22,6 +20,10 @@ services:
       - traefik.http.routers.depth2metric-http.rule=Host(`depth2metric.abdelazizwf.dev`)
       - traefik.http.routers.depth2metric-http.entrypoints=websecure
       - traefik.http.routers.depth2metric-http.tls.certresolver=myresolver
+      - traefik.http.middlewares.depth2metric-ratelimit.ratelimit.average=1
+      - traefik.http.middlewares.depth2metric-ratelimit.ratelimit.period=5s
+      - traefik.http.middlewares.depth2metric-ratelimit.ratelimit.burst=2
+      - traefik.http.routers.depth2metric-http.middlewares=depth2metric-ratelimit@docker
 
 networks:
   docker-net:

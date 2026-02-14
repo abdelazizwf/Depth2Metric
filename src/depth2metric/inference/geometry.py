@@ -98,7 +98,7 @@ def get_scale_from_detections(
     if len(scales) == 0:
         return None
 
-    return np.median(scales)
+    return float(np.median(scales))
 
 
 def get_scale_from_image_bottom(

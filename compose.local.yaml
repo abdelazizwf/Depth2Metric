@@ -1,0 +1,17 @@
+services:
+  depth2metric:
+    image: depth2metric
+    container_name: depth2metric
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:80
+    volumes:
+      - depth2metric_models:/app/models
+    environment:
+      - TORCH_HOME=/app/models/torch
+      - YOLO_CONFIG_DIR=/app/models
+
+volumes:
+  depth2metric_models: {}
