@@ -12,12 +12,14 @@
         }
     }
     </script>
+    <link rel="icon" type="image/png" href="{{ url_for('static', path='favicon.png') }}" />
 </head>
 <body>
 
 <div class="topbar">
     <div id="imageInputForm">
-        <input type="file" id="imageInput" accept="image/*">
+        <small style="font-size: smaller;">(JPEG/PNG Only)</small>
+        <input type="file" id="imageInput" accept="image/*" title="lol">
         <button id="analyzeBtn">Analyze</button>
         <span id="status"></span>
     </div>
@@ -36,6 +38,10 @@
 </div>
 
 <div id="viewer"></div>
+
+<div id="footer">
+    <small style="font-size: medium;">© 2026 Abdelaziz Farahat · Depth2Metric · <a href="https://github.com/abdelazizwf/Depth2Metric" target="_blank" rel="noopener noreferrer">GitHub</a></small>
+</div>
 
 <script type="module" src="{{ url_for('static', path='script.js') }}"></script>
 

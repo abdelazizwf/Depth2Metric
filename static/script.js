@@ -127,6 +127,8 @@ document.getElementById("correctMeasureBtn").addEventListener("click", updateLoc
 document.getElementById("analyzeBtn").addEventListener("click", uploadImage);
 
 async function uploadImage() {
+    document.getElementById("correctMeasureBtn").disabled = true;
+    document.getElementById("correctMeasureNum").disabled = true;
     const fileInput = document.getElementById("imageInput");
     const file = fileInput.files[0];
     if (!file) return;

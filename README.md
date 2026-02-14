@@ -1,6 +1,9 @@
-# Depth2Metric
+<p align="center" style="margin-bottom: 0px !important;">
+  <img width="180" src="./static/favicon.png" alt="Depth2Metric logo" align="center">
+</p>
+<h1 align="center" style="margin-top: 0px;"><a style="color: white; text-decoration: none;" href="https://depth2metric.abdelazizwf.dev">Depth2Metric</a></h1>
 
-Intelligent depth-based measurements from simple images.
+Distance measurement in metric units using depth estimation from monocular images.
 
 ## Description
 
