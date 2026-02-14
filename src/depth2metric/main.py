@@ -1,5 +1,6 @@
 import gzip
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.middleware import cors, trustedhost
@@ -8,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 
 from depth2metric.inference.models import get_midas, get_yolo
 from depth2metric.pipeline import depth_pcd, pack_pointcloud
+
+SAMPLES_DIR = Path("static/samples")
 
 
 @asynccontextmanager
@@ -69,7 +72,38 @@ async def ping():
 
 @app.get("/")
 async def root(request: Request):
-    return jinja.TemplateResponse("index.html", {"request": request})
+    samples = [p.name for p in SAMPLES_DIR.glob("*")]
+    return jinja.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "samples": samples,
+        },
+    )
+
+
+@app.post("/analyze/{filename}")
+def process_sample(request: Request, filename: str):
+    path = SAMPLES_DIR / filename
+
+    if not path.exists():
+        raise HTTPException(404, "Sample not found")
+
+    with open(path, "rb") as file:
+        pcd = depth_pcd(
+            file,
+            request.state.midas,
+            request.state.transforms,
+            request.state.yolo,
+        )
+
+        result = gzip.compress(pack_pointcloud(pcd))
+
+        return Response(
+            result,
+            media_type="application/octet-stream",
+            headers={"Content-Encoding": "gzip"},
+        )
 
 
 @app.post("/analyze")

@@ -24,6 +24,26 @@
         <span id="status"></span>
     </div>
 
+    <button id="openSamplesBtn">Use Sample Image</button>
+
+    <div id="samplesModal" class="modal">
+        <div class="modal-content">
+
+            <span id="closeSamples" class="close">&times;</span>
+            <h3>Select a Sample</h3>
+
+            <div class="samples-grid">
+                {% for img in samples %}
+                <img
+                    src="/static/samples/{{ img }}"
+                    class="sample-img"
+                    data-filename="{{ img }}"
+                >
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
 
     <div class="info">
         <span>Right-click two points in 3D to measure distance</span>

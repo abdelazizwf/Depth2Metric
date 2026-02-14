@@ -15,6 +15,43 @@ let dist;
 
 initScene();
 
+const modal = document.getElementById("samplesModal");
+const openBtn = document.getElementById("openSamplesBtn");
+const closeBtn = document.getElementById("closeSamples");
+
+openBtn.onclick = () => modal.style.display = "block";
+closeBtn.onclick = () => modal.style.display = "none";
+
+window.onclick = (event) => {
+    if (event.target === modal) {
+        modal.style.display = "none";
+    }
+};
+
+document.querySelectorAll(".sample-img").forEach(img => {
+    img.addEventListener("click", async () => {
+
+        const filename = img.dataset.filename;
+        modal.style.display = "none";
+        document.getElementById("analyzeBtn").disabled = true;
+        measureAllowed = false;
+        document.getElementById("status").innerText = "Processing...";
+
+        await loadSample(filename);
+
+    });
+});
+
+async function loadSample(filename) {
+    const response = await fetch(`/analyze/${filename}`, {
+        method: "POST"
+    });
+
+    const buffer = await response.arrayBuffer();
+
+    handlePCD(buffer);
+}
+
 function initScene() {
     const container = document.getElementById("viewer");
 
@@ -147,7 +184,10 @@ async function uploadImage() {
     });
 
     const buffer = await response.arrayBuffer();
+    handlePCD(buffer);
+}
 
+function handlePCD(buffer) {
     const pointSize = 15; // 4+4+4+1+1+1
     const count = buffer.byteLength / pointSize;
 
