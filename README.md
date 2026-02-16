@@ -11,7 +11,7 @@
 
 ## Overview
 
-This project converts a single RGB image into a scaled 3D point cloud and allows users to measure real-world distances directly in the browser. It combines monocular depth estimation, geometric camera modeling, and object-based scale estimation to approximate metric measurements without requiring specialized hardware such as LiDAR or stereo cameras.
+This project converts a single RGB image into a scaled 3D point cloud, allowing users to measure real-world distances directly in the browser. It combines monocular depth estimation, geometric camera modeling, and object-based scale estimation to approximate metric measurements without requiring specialized hardware such as LiDAR or stereo cameras.
 
 ### Features
 
@@ -27,7 +27,7 @@ This project converts a single RGB image into a scaled 3D point cloud and allows
 
 ## Installation
 
-> This will download many python dependencies AND any deep learning model used, which are MiDaS DPT-Hybrid and YOLOv26n by default. Expect heavy internet usage.
+> This will download many Python dependencies AND any deep learning model used, which are MiDaS DPT-Hybrid and YOLOv26n by default. Expect heavy internet usage.
 
 - Clone this project using `git`
 
@@ -59,7 +59,7 @@ This project converts a single RGB image into a scaled 3D point cloud and allows
     uv run fastapi dev src/depth2metric/main.py
     ```
 
-- Visit <localhost:8000>
+- Visit <http://localhost:8000>
 
 ## Technical Details and Limitations
 
@@ -72,7 +72,7 @@ This project uses a multi-staged pipeline to address some of those issues and bu
 - **Back-projection of the image into 3D using the camera model.** This ensures the scene is geometrically correct.
 - **Metric scale estimation to scale the arbitrary geometry units into metric units.** Several methods are used to estimate the scale factor:
   - **Object-based scene priors**: An object detection model ([YOLOv26n](https://docs.ultralytics.com/models/yolo26/#overview) by default) is used to detect objects with known real-world sizes in the image. If a detection is made, the ratio between the reconstructed object size and the real-world size provides a scale factor.
-  - **Ground plane detection with assumed camera height**: If object priors are unavailable, the system attempts to detect the dominant ground plane using geometric plane segmentation. Assuming a typical camera height (e.g., 1.6 m), the distance between the reconstructed camera origin and detected ground plane provides a scale estimate.
+  - **Ground plane detection with assumed camera height**: If object priors are unavailable, the system attempts to detect the dominant ground plane using geometric plane segmentation. Assuming a typical camera height (e.g., 1.6 m), the distance between the reconstructed camera origin and the detected ground plane provides a scale estimate.
   - **Bottom-image ground heuristic**: As a lightweight fallback, the system assumes that the lowest portion of the image (bottom ~5%) corresponds to the ground surface. The reconstructed distance to those points is used together with an assumed camera height to estimate scale.
 - After scaling, the back-projected points form a metric 3D point cloud of the scene. To improve performance and reduce bandwidth, the point cloud is reduced using voxel grid downsampling, and then packed into a binary buffer and sent back to the user.
 
@@ -82,6 +82,7 @@ The result is a 3D scaled reconstruction of the scene that the user can use to m
 
 Despite the geometric pipeline, several limitations remain:
 
+- Camera is always assumed to be upright and at a height of 1.6 meters
 - Absolute measurements depend on scale estimation accuracy
 - Monocular depth models introduce noise and artifacts
 - Unknown camera pose and tilt can distort reconstruction
