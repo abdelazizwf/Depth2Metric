@@ -11,6 +11,7 @@ from depth2metric.inference.models import get_midas, get_yolo
 from depth2metric.pipeline import depth_pcd, pack_pointcloud
 
 SAMPLES_DIR = Path("static/samples")
+PRECOMP_DIR = Path("static/precomputed")
 
 
 @asynccontextmanager
@@ -84,26 +85,20 @@ async def root(request: Request):
 
 @app.post("/analyze/{filename}")
 def process_sample(request: Request, filename: str):
-    path = SAMPLES_DIR / filename
+    filename = filename.split(".")[0] + ".bytes"
+    path = PRECOMP_DIR / filename
 
     if not path.exists():
         raise HTTPException(404, "Sample not found")
 
     with open(path, "rb") as file:
-        pcd = depth_pcd(
-            file,
-            request.state.midas,
-            request.state.transforms,
-            request.state.yolo,
-        )
+        buffer = file.read()
 
-        result = gzip.compress(pack_pointcloud(pcd))
-
-        return Response(
-            result,
-            media_type="application/octet-stream",
-            headers={"Content-Encoding": "gzip"},
-        )
+    return Response(
+        buffer,
+        media_type="application/octet-stream",
+        headers={"Content-Encoding": "gzip"},
+    )
 
 
 @app.post("/analyze")
