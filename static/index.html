@@ -46,7 +46,7 @@
     </div>
 
     <div class="info">
-        <span>Right-click two points in 3D to measure distance</span>
+        <span style="font-size: large;">Right-click two points in 3D to measure distance</span>
         <span id="distanceResult"></span>
     </div>
 
@@ -61,6 +61,18 @@
 
 <div id="footer">
     <small style="font-size: medium;">© 2026 Abdelaziz Farahat · Depth2Metric · <a href="https://github.com/abdelazizwf/Depth2Metric" target="_blank" rel="noopener noreferrer">GitHub</a></small>
+</div>
+
+<div id="scaleModal" class="modal">
+    <div class="modal-content">
+
+        <span id="closeScaleModal" class="close">&times;</span>
+
+        <h3>Scene Scale Estimated</h3>
+
+        <p id="scaleMessage"></p>
+
+    </div>
 </div>
 
 <script type="module" src="{{ url_for('static', path='script.js') }}"></script>

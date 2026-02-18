@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
+from ultralytics.utils import LOGGER as YOLO_LOGGER
 
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
@@ -15,6 +16,8 @@ from depth2metric.inference.utils import sharpen_image
 
 logger = get_logger(__name__)
 settings = get_settings()
+
+YOLO_LOGGER.setLevel(40) # Suppress YOLO output
 
 
 def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:

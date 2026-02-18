@@ -23,11 +23,12 @@ PRECOMP_DIR = Path(settings.precomputed_dir)
 async def lifespan(app: FastAPI):
     midas, transforms = get_midas()
     yolo = get_yolo()
-    precompute_samples(midas, transforms, yolo)
+    samples_metadata = precompute_samples(midas, transforms, yolo)
     yield {
         "yolo": yolo,
         "midas": midas,
         "transforms": transforms,
+        "samples_metadata": samples_metadata,
     }
 
 
@@ -91,6 +92,8 @@ async def root(request: Request):
 
 @app.post("/analyze/{filename}")
 def process_sample(request: Request, filename: str):
+    metadata = request.state.samples_metadata[filename]
+
     filename = filename.split(".")[0] + ".bytes"
     path = PRECOMP_DIR / filename
 
@@ -101,10 +104,11 @@ def process_sample(request: Request, filename: str):
     with open(path, "rb") as file:
         buffer = file.read()
 
+    metadata["Content-Encoding"] = "gzip"
     return Response(
         buffer,
         media_type="application/octet-stream",
-        headers={"Content-Encoding": "gzip"},
+        headers=metadata,
     )
 
 
@@ -123,7 +127,7 @@ def analyze(request: Request, file: UploadFile):
             detail="Image file is too big. Image size must be smaller that 8 MB."
         )
 
-    pcd = depth_pcd(
+    pcd, scale_factor, scaling_method = depth_pcd(
         file.file,
         request.state.midas,
         request.state.transforms,
@@ -137,5 +141,9 @@ def analyze(request: Request, file: UploadFile):
     return Response(
         result,
         media_type="application/octet-stream",
-        headers={"Content-Encoding": "gzip"},
+        headers={
+            "Content-Encoding": "gzip",
+            "X-Scaling-Factor": str(scale_factor),
+            "X-Scaling-Method": scaling_method,
+        },
     )

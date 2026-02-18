@@ -18,6 +18,13 @@ initScene();
 const modal = document.getElementById("samplesModal");
 const openBtn = document.getElementById("openSamplesBtn");
 const closeBtn = document.getElementById("closeSamples");
+const scaleModal = document.getElementById("scaleModal");
+const scaleMessage = document.getElementById("scaleMessage");
+const closeScaleModal = document.getElementById("closeScaleModal");
+
+closeScaleModal.onclick = () => {
+    scaleModal.style.display = "none";
+};
 
 openBtn.onclick = () => modal.style.display = "block";
 closeBtn.onclick = () => modal.style.display = "none";
@@ -25,6 +32,12 @@ closeBtn.onclick = () => modal.style.display = "none";
 window.onclick = (event) => {
     if (event.target === modal) {
         modal.style.display = "none";
+    }
+};
+
+window.onclick = (event) => {
+    if (event.target === scaleModal) {
+        scaleModal.style.display = "none";
     }
 };
 
@@ -47,9 +60,43 @@ async function loadSample(filename) {
         method: "POST"
     });
 
+    // ---- READ HEADERS ----
+    const scale = response.headers.get("X-Scaling-Factor");
+    const method = response.headers.get("X-Scaling-Method");
+
+    // Show modal if available
+    if (scale && method) {
+        showScaleModal(scale, method);
+    }
+
     const buffer = await response.arrayBuffer();
 
     handlePCD(buffer);
+}
+
+function showScaleModal(scale, method) {
+    let methodText = "";
+    switch (method) {
+        case "scene priors":
+            methodText = "detected objects with known size priors.";
+            break;
+        case "ground plane detection":
+            methodText = "ground plane estimation with assumed camera height.";
+            break;
+        case "bottom image as ground":
+            methodText = "scene heuristics assuming the lower image region is ground.";
+            break;
+        default:
+            methodText = "fallback estimation.";
+    }
+
+    scaleMessage.innerHTML = `
+        Scale factor: <b>${parseFloat(scale).toFixed(4)}</b><br><br>
+        This scene was scaled using <b>${methodText}</b><br><br>
+        Measurements are approximate and may vary depending on scene quality.
+    `;
+
+    scaleModal.style.display = "block";
 }
 
 function initScene() {
@@ -182,6 +229,15 @@ async function uploadImage() {
         method: "POST",
         body: formData
     });
+
+    // ---- READ HEADERS ----
+    const scale = response.headers.get("X-Scaling-Factor");
+    const method = response.headers.get("X-Scaling-Method");
+
+    // Show modal if available
+    if (scale && method) {
+        showScaleModal(scale, method);
+    }
 
     const buffer = await response.arrayBuffer();
     handlePCD(buffer);

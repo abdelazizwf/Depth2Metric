@@ -1,6 +1,7 @@
 import gzip
 import os
 import re
+import shutil
 from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO
@@ -16,6 +17,7 @@ from depth2metric.inference.camera import fallback_intrinsics, intrinsics_from_e
 from depth2metric.inference.geometry import (
     get_pcd_points,
     get_scale_from_detections,
+    get_scale_from_ground_plane,
     get_scale_from_image_bottom,
 )
 from depth2metric.inference.models import get_depth_map, get_detections
@@ -47,7 +49,7 @@ def depth_pcd(
     midas: Callable,
     midas_transforms: Callable,
     yolo: YOLO
-) -> o3d.geometry.PointCloud:
+) -> tuple[o3d.geometry.PointCloud, float, str]:
     """Read image, extract intrinsics, calculate scale, and return downsampled point cloud."""
     image_bytes = np.frombuffer(image_file.read(), dtype=np.uint8)
     image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR_RGB)
@@ -66,20 +68,23 @@ def depth_pcd(
 
     pcd_points = get_pcd_points(depth_map, K)
 
-    scale, method = None, None
+    scale_factor, method = None, ""
     detections = get_detections(yolo, image)
     if detections is not None:
-        scale = get_scale_from_detections(depth_map, detections, K)
+        scale_factor = get_scale_from_detections(depth_map, detections, K)
         method = "scene priors"
 
-    if scale is None:
-        # scale = get_scale_from_image_bottom(pcd_points)
-        scale = 0.1 # Fallback for now
-        method = "fixed fallback"
+    if scale_factor is None:
+        scale_factor = get_scale_from_ground_plane(points_to_pcd(pcd_points))
+        method = "ground plane detection"
 
-    logger.info(f"Scale factor is {scale:.5f} set using {method!r}.")
+    if scale_factor is None:
+        scale_factor = get_scale_from_image_bottom(pcd_points)
+        method = "bottom image as ground"
 
-    depth_map *= scale
+    logger.info(f"Scale factor is {scale_factor:.5f} set using {method!r}.")
+
+    depth_map *= scale_factor
     pcd_points = get_pcd_points(depth_map, K)
 
     colors = get_image_colors(image)
@@ -87,7 +92,7 @@ def depth_pcd(
 
     pcd = pcd.voxel_down_sample(voxel_size=0.7)
 
-    return pcd
+    return pcd, scale_factor, method
 
 
 def pack_pointcloud(pcd: o3d.geometry.PointCloud) -> bytes:
@@ -115,20 +120,27 @@ def pack_pointcloud(pcd: o3d.geometry.PointCloud) -> bytes:
     return structured.tobytes()
 
 
-def precompute_samples(midas, transforms, yolo):
-    if os.path.exists(PRECOMP_DIR):
-        return
+def precompute_samples(midas: Callable, transforms: Callable, yolo: YOLO) -> dict[str, str]:
+    if PRECOMP_DIR.exists:
+        shutil.rmtree(PRECOMP_DIR)
 
+    metadata = {}
     os.makedirs(PRECOMP_DIR)
     for image_file in SAMPLES_DIR.glob("*"):
         if re.search(r".+\.(jpg|jpeg|png)", image_file.name) is None:
             continue
 
         with open(image_file, "br") as f:
-            pcd = depth_pcd(f, midas, transforms, yolo)
+            pcd, scale_priors, method = depth_pcd(f, midas, transforms, yolo)
             buffer = gzip.compress(pack_pointcloud(pcd))
+            metadata[image_file.name] = {
+                "X-Scaling-Factor": str(scale_priors),
+                "X-Scaling-Method": method,
+            }
 
         with open(PRECOMP_DIR / (image_file.stem + ".bytes"), "bw") as f:
             f.write(buffer)
 
         logger.info(f"Computed PCD points buffer for {str(image_file)!r} successfully.")
+
+    return metadata
