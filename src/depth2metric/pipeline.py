@@ -11,6 +11,7 @@ import open3d as o3d
 from ultralytics import YOLO  # type: ignore
 
 from depth2metric.common.settings import get_settings
+from depth2metric.common.utils import get_logger
 from depth2metric.inference.camera import fallback_intrinsics, intrinsics_from_exif
 from depth2metric.inference.geometry import (
     get_pcd_points,
@@ -21,6 +22,7 @@ from depth2metric.inference.models import get_depth_map, get_detections
 from depth2metric.inference.utils import get_image_colors
 
 settings = get_settings()
+logger = get_logger(__name__)
 
 SAMPLES_DIR = Path(settings.samples_dir)
 PRECOMP_DIR = Path(settings.precomputed_dir)
@@ -51,25 +53,31 @@ def depth_pcd(
     image = cv2.imdecode(image_bytes, cv2.IMREAD_COLOR_RGB)
 
     if image is None:
+        logger.error("CV2 couldn't load image.")
         raise RuntimeError()
 
     width, height, _ = image.shape
     K = intrinsics_from_exif(image_file, width, height)
     if K is None:
+        logger.info("No relevant EXIF metadata found.")
         K = fallback_intrinsics(width, height)
 
     depth_map = get_depth_map(midas, midas_transforms, image)
 
     pcd_points = get_pcd_points(depth_map, K)
 
-    scale = None
+    scale, method = None, None
     detections = get_detections(yolo, image)
     if detections is not None:
         scale = get_scale_from_detections(depth_map, detections, K)
+        method = "scene priors"
 
     if scale is None:
         # scale = get_scale_from_image_bottom(pcd_points)
         scale = 0.1 # Fallback for now
+        method = "fixed fallback"
+
+    logger.info(f"Scale factor is {scale:.5f} set using {method!r}.")
 
     depth_map *= scale
     pcd_points = get_pcd_points(depth_map, K)
@@ -123,4 +131,4 @@ def precompute_samples(midas, transforms, yolo):
         with open(PRECOMP_DIR / (image_file.stem + ".bytes"), "bw") as f:
             f.write(buffer)
 
-        print(f"Computed PCD points buffer for {str(image_file)!r} successfully.")
+        logger.info(f"Computed PCD points buffer for {str(image_file)!r} successfully.")

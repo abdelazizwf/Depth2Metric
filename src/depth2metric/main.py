@@ -8,9 +8,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from depth2metric.common.settings import get_settings
+from depth2metric.common.utils import get_logger
 from depth2metric.inference.models import get_midas, get_yolo
 from depth2metric.pipeline import depth_pcd, pack_pointcloud, precompute_samples
 
+logger = get_logger(__name__)
 settings = get_settings()
 
 SAMPLES_DIR = Path(settings.samples_dir)
@@ -93,6 +95,7 @@ def process_sample(request: Request, filename: str):
     path = PRECOMP_DIR / filename
 
     if not path.exists():
+        logger.error(f"Requested sample {path!r} doesn't exist.")
         raise HTTPException(404, "Sample not found")
 
     with open(path, "rb") as file:

@@ -2,6 +2,10 @@ from typing import BinaryIO
 
 import exifread
 
+from depth2metric.common.utils import get_logger
+
+logger = get_logger(__name__)
+
 
 def intrinsics_from_exif(
     img_file: BinaryIO,
@@ -22,12 +26,16 @@ def intrinsics_from_exif(
         wh_diag_r = ((1 ** 2) + (wh_r ** 2)) ** 0.5
         w_mm = diagonal_mm * (wh_r / wh_diag_r)
         fx = fl * (width / w_mm)
+        logger.debug(f"Found EXIF tags F35={f35} and FL={fl}. FX={fx}")
     elif f35 is not None:
         fx = (f35 / 36) * width
+        logger.debug(f"Found EXIF tag F35={f35}. FX={fx}")
     elif fl is not None:
         w_mm = 6.5 # Fallback common value
         fx = (fl / w_mm) * width
+        logger.debug(f"Found EXIF tag FL={fl}. FX={fx}")
     else:
+        logger.debug("Found no relevant EXIF tags.")
         return None
 
     return {

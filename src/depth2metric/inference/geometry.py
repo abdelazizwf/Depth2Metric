@@ -2,6 +2,12 @@ import numpy as np
 import open3d as o3d
 from ultralytics.engine.results import Results
 
+from depth2metric.common.settings import get_settings
+from depth2metric.common.utils import get_logger
+
+logger = get_logger(__name__)
+settings = get_settings()
+
 PRIORS = {
     0: ["person", 170],
     56: ["chair", 80],
@@ -94,8 +100,10 @@ def get_scale_from_detections(
             # h_rel = np.linalg.norm(P_top - P_bottom)
             s = PRIORS[cls][1] / h_rel
             scales.append(s)
+            logger.debug(f"Using a detected {PRIORS[cls][0]!r} with confidence {conf:.3f} for scale.")
 
     if len(scales) == 0:
+        logger.debug("Found no usable detections.")
         return None
 
     return float(np.median(scales))
@@ -104,7 +112,7 @@ def get_scale_from_detections(
 def get_scale_from_image_bottom(
     pcd_points: np.ndarray,
     bottom_factor: float = 0.05,
-    camera_height: float = 160.0
+    camera_height: float = settings.assumed_camera_height,
 ) -> float:
     """Use the bottom of the image (assumed ground) and assumed camera height to calculate scale."""
     h, _ = pcd_points.shape
@@ -128,7 +136,7 @@ def get_scale_from_image_bottom(
 
 def get_scale_from_ground_plane(
     pcd: o3d.geometry.PointCloud,
-    camera_height: float = 160.0
+    camera_height: float = settings.assumed_camera_height,
 ) -> float | None:
     """Use a segmented vertical plane (assumed ground) and assumed camera height to calculate scale."""
     [a, b, c, d], _ = pcd.segment_plane(
@@ -142,6 +150,7 @@ def get_scale_from_ground_plane(
 
     units = plane / normal
     if abs(units[1]) < 0.75:
+        logger.debug("The detected plane isn't vertical enough.")
         return None
 
     height_to_origin = abs(d) / normal
