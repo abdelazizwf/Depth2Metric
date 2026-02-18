@@ -10,7 +10,6 @@ let selectedPoints = [];
 let measurementMarkers = [];
 let measurementLine = null;
 let measureAllowed = false;
-let localScale = 1;
 let dist;
 
 initScene();
@@ -74,6 +73,21 @@ async function loadSample(filename) {
     handlePCD(buffer);
 }
 
+function rescalePointCloud(scaleRatio) {
+
+    const positions = pointCloud.geometry.attributes.position.array;
+
+    for (let i = 0; i < positions.length; i++) {
+        positions[i] *= scaleRatio;
+    }
+
+    pointCloud.geometry.attributes.position.needsUpdate = true;
+
+    // Optional but recommended
+    pointCloud.geometry.computeBoundingSphere();
+    pointCloud.geometry.computeBoundingBox();
+}
+
 function showScaleModal(scale, method) {
     let methodText = "";
     switch (method) {
@@ -93,7 +107,7 @@ function showScaleModal(scale, method) {
     scaleMessage.innerHTML = `
         Scale factor: <b>${parseFloat(scale).toFixed(4)}</b><br><br>
         This scene was scaled using <b>${methodText}</b><br><br>
-        Measurements are approximate and may vary depending on scene quality.
+        Measurements are approximate and may vary depending on scene quality and the accuracy of the estimated depth.
     `;
 
     scaleModal.style.display = "block";
@@ -202,8 +216,9 @@ function updateLocalScale() {
     const inp = document.getElementById("correctMeasureNum");
     const newMeasure = inp.value;
     if (inp.value === "") return;
-    localScale *= newMeasure / dist;
-    measureDistance(false);
+    const ratio = newMeasure / dist;
+    rescalePointCloud(ratio);
+    clearMeasurement();
     inp.value = "";
 }
 
@@ -265,7 +280,6 @@ function handlePCD(buffer) {
     }
 
     clearMeasurement();
-    localScale = 1;
 
     document.getElementById("analyzeBtn").disabled = false;
     document.getElementById("status").innerText = "Done!";
@@ -359,7 +373,7 @@ function measureDistance(drawLine=true) {
     const dy = p1.y - p2.y;
     const dz = p1.z - p2.z;
 
-    dist = Math.sqrt(dx * dx + dy * dy + dz * dz) * localScale;
+    dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
     document.getElementById("distanceResult").innerText = dist.toFixed(1) + " Cm";
 
