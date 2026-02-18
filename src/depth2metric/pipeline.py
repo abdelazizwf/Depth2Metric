@@ -10,6 +10,7 @@ import numpy as np
 import open3d as o3d
 from ultralytics import YOLO  # type: ignore
 
+from depth2metric.common.settings import get_settings
 from depth2metric.inference.camera import fallback_intrinsics, intrinsics_from_exif
 from depth2metric.inference.geometry import (
     get_pcd_points,
@@ -19,8 +20,10 @@ from depth2metric.inference.geometry import (
 from depth2metric.inference.models import get_depth_map, get_detections
 from depth2metric.inference.utils import get_image_colors
 
-SAMPLES_DIR = Path("static/samples")
-PRECOMP_DIR = Path("static/precomputed")
+settings = get_settings()
+
+SAMPLES_DIR = Path(settings.samples_dir)
+PRECOMP_DIR = Path(settings.precomputed_dir)
 
 
 def points_to_pcd(

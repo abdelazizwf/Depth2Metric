@@ -1,5 +1,6 @@
 # type: ignore
 
+import os
 from collections.abc import Callable
 
 import cv2
@@ -8,13 +9,16 @@ import torch
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
 
+from depth2metric.common.settings import get_settings
 from depth2metric.inference.utils import sharpen_image
+
+settings = get_settings()
 
 
 def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:
     """Load MiDaS model and related transforms."""
-    midas = torch.hub.load("intel-isl/MiDaS", model_name)
-    midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms")
+    midas = torch.hub.load("intel-isl/MiDaS", model_name, trust_repo=True)
+    midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
     if model_name == "DPT_Large" or model_name == "DPT_Hybrid":
         transform = midas_transforms.dpt_transform
     else:
@@ -22,7 +26,8 @@ def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:
     return midas, transform
 
 
-def get_yolo(model_file: str = "models/yolo26n.pt") -> YOLO:
+def get_yolo(model_name: str = "yolo26n") -> YOLO:
+    model_file = os.path.join(settings.models_dir, model_name + ".pt")
     return YOLO(model_file)
 
 

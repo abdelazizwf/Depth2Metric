@@ -7,11 +7,14 @@ from fastapi.middleware import cors, trustedhost
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from depth2metric.common.settings import get_settings
 from depth2metric.inference.models import get_midas, get_yolo
 from depth2metric.pipeline import depth_pcd, pack_pointcloud, precompute_samples
 
-SAMPLES_DIR = Path("static/samples")
-PRECOMP_DIR = Path("static/precomputed")
+settings = get_settings()
+
+SAMPLES_DIR = Path(settings.samples_dir)
+PRECOMP_DIR = Path(settings.precomputed_dir)
 
 
 @asynccontextmanager
