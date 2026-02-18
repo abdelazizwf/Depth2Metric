@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from depth2metric.inference.models import get_midas, get_yolo
-from depth2metric.pipeline import depth_pcd, pack_pointcloud
+from depth2metric.pipeline import depth_pcd, pack_pointcloud, precompute_samples
 
 SAMPLES_DIR = Path("static/samples")
 PRECOMP_DIR = Path("static/precomputed")
@@ -18,6 +18,7 @@ PRECOMP_DIR = Path("static/precomputed")
 async def lifespan(app: FastAPI):
     midas, transforms = get_midas()
     yolo = get_yolo()
+    precompute_samples(midas, transforms, yolo)
     yield {
         "yolo": yolo,
         "midas": midas,

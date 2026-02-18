@@ -1,4 +1,8 @@
+import gzip
+import os
+import re
 from collections.abc import Callable
+from pathlib import Path
 from typing import BinaryIO
 
 import cv2
@@ -14,6 +18,9 @@ from depth2metric.inference.geometry import (
 )
 from depth2metric.inference.models import get_depth_map, get_detections
 from depth2metric.inference.utils import get_image_colors
+
+SAMPLES_DIR = Path("static/samples")
+PRECOMP_DIR = Path("static/precomputed")
 
 
 def points_to_pcd(
@@ -95,3 +102,22 @@ def pack_pointcloud(pcd: o3d.geometry.PointCloud) -> bytes:
     structured["b"] = colors[:, 2]
 
     return structured.tobytes()
+
+
+def precompute_samples(midas, transforms, yolo):
+    if os.path.exists(PRECOMP_DIR):
+        return
+
+    os.makedirs(PRECOMP_DIR)
+    for image_file in SAMPLES_DIR.glob("*"):
+        if re.search(r".+\.(jpg|jpeg|png)", image_file.name) is None:
+            continue
+
+        with open(image_file, "br") as f:
+            pcd = depth_pcd(f, midas, transforms, yolo)
+            buffer = gzip.compress(pack_pointcloud(pcd))
+
+        with open(PRECOMP_DIR / (image_file.stem + ".bytes"), "bw") as f:
+            f.write(buffer)
+
+        print(f"Computed PCD points buffer for {str(image_file)!r} successfully.")
