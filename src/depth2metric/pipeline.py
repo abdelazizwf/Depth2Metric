@@ -121,7 +121,7 @@ def pack_pointcloud(pcd: o3d.geometry.PointCloud) -> bytes:
 
 
 def precompute_samples(midas: Callable, transforms: Callable, yolo: YOLO) -> dict[str, str]:
-    if PRECOMP_DIR.exists:
+    if PRECOMP_DIR.exists():
         shutil.rmtree(PRECOMP_DIR)
 
     metadata = {}
