@@ -8,22 +8,6 @@ from depth2metric.common.utils import get_logger
 logger = get_logger(__name__)
 settings = get_settings()
 
-PRIORS = {
-    0: ["person", 170],
-    56: ["chair", 80],
-    57: ["couch", 80],
-    59: ["bed", 100],
-    60: ["dining_table", 75],
-    39: ["bottle", 25],
-    63: ["laptop", 30],
-    2: ["car", 120],
-    7: ["truck", 300],
-    68: ["microwave", 30],
-    69: ["oven", 80],
-    72: ["refrigerator", 200],
-}
-
-
 def pixel_to_3d(u: int, v: int, depth: int, K: dict[str, float]) -> np.ndarray:
     """Turn a 2D pixel to 3D camera coordinates."""
     X = (u - K["cx"]) * depth / K["fx"]
@@ -80,6 +64,8 @@ def get_scale_from_detections(
 ) -> float | None:
     """Use detected scene priors to calculate scale."""
     scales = []
+    priors = settings.size_priors
+
     for box, cls, conf in zip(
         detections.boxes.xyxy,
         detections.boxes.cls,
@@ -87,7 +73,7 @@ def get_scale_from_detections(
     ):
         cls = int(cls.item())
 
-        if cls in PRIORS and conf >= conf_threshold:
+        if cls in priors and conf >= conf_threshold:
             # Calculate the mid-top and mid-bottom points
             x_min, y_min, x_max, y_max = box
             x_c = int((x_min + x_max) / 2)
@@ -97,10 +83,9 @@ def get_scale_from_detections(
             P_top = pixel_to_3d(x_c, y_max, depth_map[y_max, x_c], K)
 
             h_rel = np.abs(P_top[1] - P_bottom[1]) # Distance of the vertical only
-            # h_rel = np.linalg.norm(P_top - P_bottom)
-            s = PRIORS[cls][1] / h_rel
+            s = priors[cls][1] / h_rel
             scales.append(s)
-            logger.debug(f"Using a detected {PRIORS[cls][0]!r} with confidence {conf:.3f} for scale.")
+            logger.debug(f"Using a detected {priors[cls][0]!r} with confidence {conf:.3f} for scale.")
 
     if len(scales) == 0:
         logger.debug("Found no usable detections.")
@@ -139,18 +124,39 @@ def get_scale_from_ground_plane(
     camera_height: float = settings.assumed_camera_height,
 ) -> float | None:
     """Use a segmented vertical plane (assumed ground) and assumed camera height to calculate scale."""
-    [a, b, c, d], _ = pcd.segment_plane(
-        distance_threshold=0.5,
-        ransac_n=10,
-        num_iterations=500,
-    )
+
+    # IMPROVEMENT: Pre-filter points for RANSAC
+    # We expect the ground to be below the camera (Y < 0) and not too far away
+    points = np.asarray(pcd.points)
+
+    # Keep only points that are likely to be ground (heuristic)
+    # 1. Below camera center (Y < 0 in our coordinate system where Y-up is negative)
+    # 2. Within a reasonable distance (e.g., 50m relative units)
+    mask = (points[:, 1] < 0) & (np.linalg.norm(points, axis=1) < 5000)
+
+    if np.sum(mask) < settings.ransac_n:
+        logger.debug("Not enough points after filtering for ground plane detection.")
+        return None
+
+    filtered_pcd = pcd.select_by_index(np.where(mask)[0])
+
+    try:
+        [a, b, c, d], _ = filtered_pcd.segment_plane(
+            distance_threshold=settings.ransac_distance_threshold,
+            ransac_n=settings.ransac_n,
+            num_iterations=settings.ransac_iterations,
+        )
+    except Exception as e:
+        logger.debug(f"RANSAC plane segmentation failed: {e}")
+        return None
 
     plane = np.array([a, b, c])
     normal = np.linalg.norm(plane)
 
     units = plane / normal
-    if abs(units[1]) < 0.75:
-        logger.debug("The detected plane isn't vertical enough.")
+    # Check if the plane is horizontal enough (aligned with Y axis)
+    if abs(units[1]) < settings.ground_vertical_threshold:
+        logger.debug("The detected plane isn't horizontal enough.")
         return None
 
     height_to_origin = abs(d) / normal

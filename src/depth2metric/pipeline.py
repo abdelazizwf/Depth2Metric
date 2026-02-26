@@ -90,7 +90,7 @@ def depth_pcd(
     colors = get_image_colors(image)
     pcd = points_to_pcd(pcd_points, colors)
 
-    pcd = pcd.voxel_down_sample(voxel_size=0.7)
+    pcd = pcd.voxel_down_sample(voxel_size=settings.voxel_size)
 
     return pcd, scale_factor, method
 

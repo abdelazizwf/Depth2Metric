@@ -1,6 +1,8 @@
+import asyncio
 import gzip
 from contextlib import asynccontextmanager
 from pathlib import Path
+from functools import partial
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.middleware import cors, trustedhost
@@ -21,9 +23,13 @@ PRECOMP_DIR = Path(settings.precomputed_dir)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Load models once
     midas, transforms = get_midas()
     yolo = get_yolo()
+
+    # Precompute samples (synchronous during startup is fine)
     samples_metadata = precompute_samples(midas, transforms, yolo)
+
     yield {
         "yolo": yolo,
         "midas": midas,
@@ -91,29 +97,34 @@ async def root(request: Request):
 
 
 @app.post("/analyze/{filename}")
-def process_sample(request: Request, filename: str):
-    metadata = request.state.samples_metadata[filename]
+async def process_sample(request: Request, filename: str):
+    metadata = request.state.samples_metadata.get(filename)
+    if not metadata:
+        raise HTTPException(404, "Sample metadata not found")
 
-    filename = filename.split(".")[0] + ".bytes"
-    path = PRECOMP_DIR / filename
+    filename_bytes = filename.split(".")[0] + ".bytes"
+    path = PRECOMP_DIR / filename_bytes
 
     if not path.exists():
         logger.error(f"Requested sample {path!r} doesn't exist.")
         raise HTTPException(404, "Sample not found")
 
-    with open(path, "rb") as file:
-        buffer = file.read()
+    # Use a thread for I/O
+    loop = asyncio.get_event_loop()
+    buffer = await loop.run_in_executor(None, path.read_bytes)
 
-    metadata["Content-Encoding"] = "gzip"
+    headers = dict(metadata)
+    headers["Content-Encoding"] = "gzip"
+
     return Response(
         buffer,
         media_type="application/octet-stream",
-        headers=metadata,
+        headers=headers,
     )
 
 
 @app.post("/analyze")
-def analyze(request: Request, file: UploadFile):
+async def analyze(request: Request, file: UploadFile):
     mimes = ["image/png", "image/jpeg"]
     if file.size is None or file.content_type not in mimes:
         raise HTTPException(
@@ -124,19 +135,34 @@ def analyze(request: Request, file: UploadFile):
     if file.size > (1024 * 1024 * 8):
         raise HTTPException(
             status_code=400,
-            detail="Image file is too big. Image size must be smaller that 8 MB."
+            detail="Image file is too big. Image size must be smaller than 8 MB."
         )
 
-    pcd, scale_factor, scaling_method = depth_pcd(
-        file.file,
-        request.state.midas,
-        request.state.transforms,
-        request.state.yolo,
-    )
+    loop = asyncio.get_event_loop()
 
-    file.file.close()
+    # Run heavy compute in a separate thread to keep the event loop free
+    try:
+        # Offload depth processing
+        pcd, scale_factor, scaling_method = await loop.run_in_executor(
+            None,
+            partial(
+                depth_pcd,
+                file.file,
+                request.state.midas,
+                request.state.transforms,
+                request.state.yolo,
+            )
+        )
 
-    result = gzip.compress(pack_pointcloud(pcd))
+        # Offload packing and compression
+        packed_data = await loop.run_in_executor(None, pack_pointcloud, pcd)
+        result = await loop.run_in_executor(None, gzip.compress, packed_data)
+
+    except Exception as e:
+        logger.exception("Error during image analysis")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        await file.close()
 
     return Response(
         result,

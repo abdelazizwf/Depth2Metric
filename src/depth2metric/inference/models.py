@@ -12,7 +12,6 @@ from ultralytics.utils import LOGGER as YOLO_LOGGER
 
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
-from depth2metric.inference.utils import sharpen_image
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -20,11 +19,16 @@ settings = get_settings()
 YOLO_LOGGER.setLevel(40) # Suppress YOLO output
 
 
-def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:
+def get_midas(model_name: str | None = None) -> tuple[Callable, Callable]:
     """Load MiDaS model and related transforms."""
+    if model_name is None:
+        model_name = settings.midas_model
+
     midas = torch.hub.load("intel-isl/MiDaS", model_name, trust_repo=True)
+    midas.eval()
+
     midas_transforms = torch.hub.load("intel-isl/MiDaS", "transforms", trust_repo=True)
-    if model_name == "DPT_Large" or model_name == "DPT_Hybrid":
+    if model_name in ["DPT_Large", "DPT_Hybrid"]:
         transform = midas_transforms.dpt_transform
     else:
         transform = midas_transforms.small_transform
@@ -32,7 +36,10 @@ def get_midas(model_name: str = "DPT_Hybrid") -> tuple[Callable, Callable]:
     return midas, transform
 
 
-def get_yolo(model_name: str = "yolo26n") -> YOLO:
+def get_yolo(model_name: str | None = None) -> YOLO:
+    if model_name is None:
+        model_name = settings.yolo_model
+
     model_file = os.path.join(settings.models_dir, model_name + ".pt")
     yolo = YOLO(model_file)
     logger.info(f"Loaded {model_name} from {model_file!r} successfully.")
@@ -68,9 +75,4 @@ def get_depth_map(model: Callable, transforms: Callable, image: np.ndarray) -> n
     """Get the final depth map possibly combining multiple outputs."""
     tr_image = transforms(image)
     orig_output = get_depth(model, image, tr_image)
-
-    # sh_image = sharpen_image(image)
-    # sh_output = get_depth(model, sh_image, transforms(sh_image))
-
-    # output = cv2.add(orig_output, sh_output) / 2
     return orig_output

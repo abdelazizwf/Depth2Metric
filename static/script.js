@@ -272,12 +272,6 @@ function centerAndZoomCamera() {
 function onPointerDown(event) {
     if (!state.isMeasurementAllowed) return;
 
-    // Right-click: trigger immediate selection
-    if (event.pointerType === 'mouse' && event.button === 2) {
-        selectPointAt(event.clientX, event.clientY);
-        return;
-    }
-
     // Touch or Left-click: start long press timer
     if (event.pointerType === 'touch' || (event.pointerType === 'mouse' && event.button === 0)) {
         clearLongPress();
