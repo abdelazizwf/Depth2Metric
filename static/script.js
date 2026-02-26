@@ -46,6 +46,12 @@ const elements = {
     scaleMessage: document.getElementById('scaleMessage'),
     closeScaleModal: document.getElementById('closeScaleModal'),
 
+    // Error Modal
+    errorModal: document.getElementById('errorModal'),
+    errorMessage: document.getElementById('errorMessage'),
+    closeErrorModal: document.getElementById('closeErrorModal'),
+    errorOkBtn: document.getElementById('errorOkBtn'),
+
     // Manual Calibration
     correctMeasureNum: document.getElementById('correctMeasureNum'),
     correctMeasureBtn: document.getElementById('correctMeasureBtn'),
@@ -108,9 +114,14 @@ function initEventListeners() {
     elements.closeSamples.onclick = () => elements.samplesModal.style.display = 'none';
     elements.closeScaleModal.onclick = () => elements.scaleModal.style.display = 'none';
 
+    const hideError = () => elements.errorModal.style.display = 'none';
+    elements.closeErrorModal.onclick = hideError;
+    elements.errorOkBtn.onclick = hideError;
+
     window.onclick = (event) => {
         if (event.target === elements.samplesModal) elements.samplesModal.style.display = 'none';
         if (event.target === elements.scaleModal) elements.scaleModal.style.display = 'none';
+        if (event.target === elements.errorModal) elements.errorModal.style.display = 'none';
     };
 
     // Sample selection
@@ -156,7 +167,9 @@ async function handleProcessStart(processFn) {
         elements.status.innerText = 'Done!';
     } catch (error) {
         console.error(error);
-        elements.status.innerText = 'Error processing image.';
+        elements.status.innerText = 'Error.';
+        clearScene();
+        showErrorModal("Analysis Failed", error.message || "An unexpected error occurred during processing.");
     } finally {
         elements.analyzeBtn.disabled = false;
     }
@@ -179,7 +192,14 @@ async function uploadImage(file) {
 }
 
 async function processAnalyzeResponse(response) {
-    if (!response.ok) throw new Error('Network response was not ok');
+    if (!response.ok) {
+        let errorMsg = "Server error";
+        try {
+            const errorData = await response.json();
+            errorMsg = errorData.detail || errorMsg;
+        } catch(e) {}
+        throw new Error(`[${response.status}] ${errorMsg}`);
+    }
 
     const scale = response.headers.get('X-Scaling-Factor');
     const method = response.headers.get('X-Scaling-Method');
@@ -198,6 +218,8 @@ async function processAnalyzeResponse(response) {
 function handlePCD(buffer) {
     const pointSize = 15; // Structured: f32 x 3 (12 bytes) + u8 x 3 (3 bytes) = 15 bytes
     const count = buffer.byteLength / pointSize;
+    if (count === 0) throw new Error("Received an empty point cloud.");
+
     const dataView = new DataView(buffer);
 
     const points = new Float32Array(count * 3);
@@ -271,6 +293,12 @@ function centerAndZoomCamera() {
  */
 function onPointerDown(event) {
     if (!state.isMeasurementAllowed) return;
+
+    // Right-click: trigger immediate selection
+    if (event.pointerType === 'mouse' && event.button === 2) {
+        selectPointAt(event.clientX, event.clientY);
+        return;
+    }
 
     // Touch or Left-click: start long press timer
     if (event.pointerType === 'touch' || (event.pointerType === 'mouse' && event.button === 0)) {
@@ -394,6 +422,14 @@ function clearMeasurement() {
     elements.distanceResult.innerText = '';
 }
 
+function clearScene() {
+    if (state.pointCloud) {
+        state.scene.remove(state.pointCloud);
+        state.pointCloud = null;
+    }
+    clearMeasurement();
+}
+
 function updateLocalScale() {
     const newMeasure = parseFloat(elements.correctMeasureNum.value);
     if (isNaN(newMeasure) || state.currentDistance === 0) return;
@@ -403,7 +439,6 @@ function updateLocalScale() {
 
     clearMeasurement();
     elements.correctMeasureNum.value = '';
-    elements.correctMeasureBtn.disabled = true;
 }
 
 function rescalePointCloud(ratio) {
@@ -433,6 +468,12 @@ function showScaleModal(scale, method) {
         Measurements are approximate and may vary depending on scene quality and accuracy.
     `;
     elements.scaleModal.style.display = 'block';
+}
+
+function showErrorModal(title, message) {
+    elements.errorModal.querySelector('h3').innerText = title;
+    elements.errorMessage.innerText = message;
+    elements.errorModal.style.display = 'block';
 }
 
 function animate() {

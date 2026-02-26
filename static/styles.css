@@ -2,6 +2,7 @@
     --bg-color: #111;
     --text-color: #eee;
     --accent-color: #4caf50;
+    --error-color: #f44336;
     --bar-bg: #1c1c1c;
     --border-color: #333;
     --modal-bg: rgba(0, 0, 0, 0.7);
@@ -117,6 +118,14 @@ body {
 .highlight {
     font-weight: bold;
     color: var(--accent-color);
+}
+
+.text-error {
+    color: var(--error-color);
+}
+
+.border-error {
+    border: 1px solid var(--error-color) !important;
 }
 
 .label-text {
