@@ -1,13 +1,14 @@
 import asyncio
 import gzip
 from contextlib import asynccontextmanager
-from pathlib import Path
 from functools import partial
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response, UploadFile
 from fastapi.middleware import cors, trustedhost
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
@@ -82,6 +83,11 @@ async def health_check():
 @app.get("/ping")
 async def ping():
     return {"message": "pong"}
+
+
+@app.get("/metrics")
+async def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/")
@@ -170,6 +176,7 @@ async def analyze(request: Request, file: UploadFile):
         headers={
             "Content-Encoding": "gzip",
             "X-Scaling-Factor": str(scale_factor),
+            "X-Scaling-Factor-Value": str(scale_factor),
             "X-Scaling-Method": scaling_method,
         },
     )

@@ -2,6 +2,7 @@ import gzip
 import os
 import re
 import shutil
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import BinaryIO
@@ -11,6 +12,7 @@ import numpy as np
 import open3d as o3d
 from ultralytics import YOLO  # type: ignore
 
+from depth2metric.common.metrics import INFERENCE_LATENCY, SCALING_METHOD_TOTAL
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
 from depth2metric.inference.camera import fallback_intrinsics, intrinsics_from_exif
@@ -64,12 +66,21 @@ def depth_pcd(
         logger.info("No relevant EXIF metadata found.")
         K = fallback_intrinsics(width, height)
 
+    # Measure MiDaS Latency
+    start_time = time.perf_counter()
     depth_map = get_depth_map(midas, midas_transforms, image)
+    INFERENCE_LATENCY.labels(component="midas").observe(time.perf_counter() - start_time)
 
+    # Measure YOLO Latency
+    start_time = time.perf_counter()
+    detections = get_detections(yolo, image)
+    INFERENCE_LATENCY.labels(component="yolo").observe(time.perf_counter() - start_time)
+
+    # Measure PCD projection and Scaling logic latency
+    start_time = time.perf_counter()
     pcd_points = get_pcd_points(depth_map, K)
 
     scale_factor, method = None, ""
-    detections = get_detections(yolo, image)
     if detections is not None:
         scale_factor = get_scale_from_detections(depth_map, detections, K)
         method = "scene priors"
@@ -83,6 +94,7 @@ def depth_pcd(
         method = "bottom image as ground"
 
     logger.info(f"Scale factor is {scale_factor:.5f} set using {method!r}.")
+    SCALING_METHOD_TOTAL.labels(method=method).inc()
 
     depth_map *= scale_factor
     pcd_points = get_pcd_points(depth_map, K)
@@ -91,6 +103,7 @@ def depth_pcd(
     pcd = points_to_pcd(pcd_points, colors)
 
     pcd = pcd.voxel_down_sample(voxel_size=settings.voxel_size)
+    INFERENCE_LATENCY.labels(component="pcd_logic").observe(time.perf_counter() - start_time)
 
     return pcd, scale_factor, method
 
