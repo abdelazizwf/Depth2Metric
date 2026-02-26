@@ -437,6 +437,9 @@ function updateLocalScale() {
     const ratio = newMeasure / state.currentDistance;
     rescalePointCloud(ratio);
 
+    // Report manual calibration to backend
+    fetch('/telemetry/calibrate', { method: 'POST' }).catch(console.error);
+
     clearMeasurement();
     elements.correctMeasureNum.value = '';
 }

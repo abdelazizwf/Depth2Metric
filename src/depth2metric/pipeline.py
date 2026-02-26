@@ -12,7 +12,11 @@ import numpy as np
 import open3d as o3d
 from ultralytics import YOLO  # type: ignore
 
-from depth2metric.common.metrics import INFERENCE_LATENCY, SCALING_METHOD_TOTAL
+from depth2metric.common.metrics import (
+    DETECTION_CONFIDENCE,
+    INFERENCE_LATENCY,
+    SCALING_METHOD_TOTAL,
+)
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
 from depth2metric.inference.camera import fallback_intrinsics, intrinsics_from_exif
@@ -82,8 +86,10 @@ def depth_pcd(
 
     scale_factor, method = None, ""
     if detections is not None:
-        scale_factor = get_scale_from_detections(depth_map, detections, K)
-        method = "scene priors"
+        scale_factor, avg_conf = get_scale_from_detections(depth_map, detections, K)
+        if scale_factor is not None:
+            method = "scene priors"
+            DETECTION_CONFIDENCE.observe(avg_conf)
 
     if scale_factor is None:
         scale_factor = get_scale_from_ground_plane(points_to_pcd(pcd_points))

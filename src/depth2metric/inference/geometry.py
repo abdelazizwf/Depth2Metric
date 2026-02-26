@@ -61,9 +61,10 @@ def get_scale_from_detections(
     detections: Results,
     K: dict[str, float],
     conf_threshold: float = 0.5,
-) -> float | None:
-    """Use detected scene priors to calculate scale."""
+) -> tuple[float | None, float]:
+    """Use detected scene priors to calculate scale. Returns (scale, avg_conf)."""
     scales = []
+    confs = []
     priors = settings.size_priors
 
     for box, cls, conf in zip(
@@ -72,8 +73,9 @@ def get_scale_from_detections(
         detections.boxes.conf
     ):
         cls = int(cls.item())
+        conf_val = float(conf.item())
 
-        if cls in priors and conf >= conf_threshold:
+        if cls in priors and conf_val >= conf_threshold:
             # Calculate the mid-top and mid-bottom points
             x_min, y_min, x_max, y_max = box
             x_c = int((x_min + x_max) / 2)
@@ -85,13 +87,14 @@ def get_scale_from_detections(
             h_rel = np.abs(P_top[1] - P_bottom[1]) # Distance of the vertical only
             s = priors[cls][1] / h_rel
             scales.append(s)
-            logger.debug(f"Using a detected {priors[cls][0]!r} with confidence {conf:.3f} for scale.")
+            confs.append(conf_val)
+            logger.debug(f"Using a detected {priors[cls][0]!r} with confidence {conf_val:.3f} for scale.")
 
     if len(scales) == 0:
         logger.debug("Found no usable detections.")
-        return None
+        return None, 0.0
 
-    return float(np.median(scales))
+    return float(np.median(scales)), float(np.mean(confs))
 
 
 def get_scale_from_image_bottom(

@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from depth2metric.common.metrics import MANUAL_CALIBRATION_TOTAL, PAYLOAD_SIZE_BYTES
 from depth2metric.common.settings import get_settings
 from depth2metric.common.utils import get_logger
 from depth2metric.inference.models import get_midas, get_yolo
@@ -90,6 +91,12 @@ async def metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
+@app.post("/telemetry/calibrate")
+async def record_calibration():
+    MANUAL_CALIBRATION_TOTAL.inc()
+    return {"status": "ok"}
+
+
 @app.get("/")
 async def root(request: Request):
     samples = [p.name for p in SAMPLES_DIR.glob("*")]
@@ -118,6 +125,9 @@ async def process_sample(request: Request, filename: str):
     # Use a thread for I/O
     loop = asyncio.get_event_loop()
     buffer = await loop.run_in_executor(None, path.read_bytes)
+
+    # Record payload size (it's already compressed in precomputed samples)
+    PAYLOAD_SIZE_BYTES.labels(type="compressed").observe(len(buffer))
 
     headers = dict(metadata)
     headers["Content-Encoding"] = "gzip"
@@ -162,7 +172,10 @@ async def analyze(request: Request, file: UploadFile):
 
         # Offload packing and compression
         packed_data = await loop.run_in_executor(None, pack_pointcloud, pcd)
+        PAYLOAD_SIZE_BYTES.labels(type="uncompressed").observe(len(packed_data))
+
         result = await loop.run_in_executor(None, gzip.compress, packed_data)
+        PAYLOAD_SIZE_BYTES.labels(type="compressed").observe(len(result))
 
     except Exception as e:
         logger.exception("Error during image analysis")
