@@ -1,4 +1,5 @@
 from typing import Any
+
 from pydantic import DirectoryPath, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,8 +20,8 @@ DEFAULT_PRIORS = {
 
 class Settings(BaseSettings):
     logging_level: str = Field("INFO")
-    models_dir: DirectoryPath = Field("./models")
-    samples_dir: DirectoryPath = Field("./static/samples")
+    models_dir: DirectoryPath = Field("./models") # type: ignore
+    samples_dir: DirectoryPath = Field("./static/samples") # type: ignore
     precomputed_dir: str = Field("./static/precomputed")
 
     # Models
@@ -34,6 +35,15 @@ class Settings(BaseSettings):
     ransac_n: int = Field(10)
     ransac_iterations: int = Field(500)
     ground_vertical_threshold: float = Field(0.75)
+    fallback_scale_factor: float = Field(0.3)
+
+    # Edge Case Fixes
+    enable_edge_cropping: bool = Field(True)
+    edge_cropping_percentage: float = Field(0.07)
+
+    enable_percentile_clipping: bool = Field(True)
+    percentile_low: float = Field(3.0)
+    percentile_high: float = Field(95.0)
 
     # Scene Priors
     size_priors: dict[int, list[Any]] = Field(default_factory=lambda: DEFAULT_PRIORS)
@@ -45,4 +55,4 @@ class Settings(BaseSettings):
 
 
 def get_settings():
-    return Settings()
+    return Settings() # type: ignore

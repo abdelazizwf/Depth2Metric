@@ -71,8 +71,41 @@ def get_depth(model: Callable, original_image: np.ndarray, tr_image: np.ndarray)
     return output
 
 
+def preprocess_image(image: np.ndarray) -> np.ndarray:
+    """Apply modular preprocessing steps like edge cropping."""
+    if settings.enable_edge_cropping:
+        h, w = image.shape[:2]
+        ph = int(h * settings.edge_cropping_percentage)
+        pw = int(w * settings.edge_cropping_percentage)
+
+        # Crop borders and resize back to original to keep pipeline consistent
+        cropped = image[ph:h-ph, pw:w-pw]
+        image = cv2.resize(cropped, (w, h), interpolation=cv2.INTER_CUBIC)
+        logger.debug(f"Edge cropping applied: -{ph}px height, -{pw}px width.")
+
+    return image
+
+
+def postprocess_depth(depth_map: np.ndarray) -> np.ndarray:
+    """Apply modular postprocessing like percentile clipping."""
+    if settings.enable_percentile_clipping:
+        low = np.percentile(depth_map, settings.percentile_low)
+        high = np.percentile(depth_map, settings.percentile_high)
+
+        # Clip values to the percentiles but keep the original scale
+        depth_map = np.clip(depth_map, low, high)
+
+        logger.debug(f"Percentile clipping applied: [{settings.percentile_low}%, {settings.percentile_high}%] at scale [{low:.2f}, {high:.2f}]")
+
+    return depth_map
+
 def get_depth_map(model: Callable, transforms: Callable, image: np.ndarray) -> np.ndarray:
-    """Get the final depth map possibly combining multiple outputs."""
-    tr_image = transforms(image)
-    orig_output = get_depth(model, image, tr_image)
-    return orig_output
+    """Get the final depth map applying pre and post processing."""
+    processed_image = preprocess_image(image)
+
+    tr_image = transforms(processed_image)
+    depth_map = get_depth(model, processed_image, tr_image)
+
+    depth_map = postprocess_depth(depth_map)
+
+    return depth_map

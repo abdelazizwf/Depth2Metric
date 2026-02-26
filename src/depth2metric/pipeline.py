@@ -99,6 +99,10 @@ def depth_pcd(
         scale_factor = get_scale_from_image_bottom(pcd_points)
         method = "bottom image as ground"
 
+    if scale_factor > settings.fallback_scale_factor:
+        scale_factor = settings.fallback_scale_factor
+        method = "fallback factor"
+
     logger.info(f"Scale factor is {scale_factor:.5f} set using {method!r}.")
     SCALING_METHOD_TOTAL.labels(method=method).inc()
 
