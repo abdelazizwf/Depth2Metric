@@ -21,10 +21,7 @@ def intrinsics_from_exif(
     if f35 is not None and fl is not None:
         # Get the sensor diagonal and width to height ratio to calculate sensor width
         crop_factor = f35 / fl
-        wh_r = width / height
-        diagonal_mm = 43.27 / crop_factor # 43.27 is the diagonal of frame 36x24
-        wh_diag_r = ((1 ** 2) + (wh_r ** 2)) ** 0.5
-        w_mm = diagonal_mm * (wh_r / wh_diag_r)
+        w_mm = 36 / crop_factor
         fx = fl * (width / w_mm)
         logger.debug(f"Found EXIF tags F35={f35} and FL={fl}. FX={fx}")
     elif f35 is not None:

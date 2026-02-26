@@ -64,7 +64,7 @@ def depth_pcd(
         logger.error("CV2 couldn't load image.")
         raise RuntimeError()
 
-    width, height, _ = image.shape
+    height, width, _ = image.shape
     K = intrinsics_from_exif(image_file, width, height)
     if K is None:
         logger.info("No relevant EXIF metadata found.")
