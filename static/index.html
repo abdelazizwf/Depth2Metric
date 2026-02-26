@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depth2Metric</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
     <script type="importmap">
@@ -16,62 +17,58 @@
 </head>
 <body>
 
-<div class="topbar">
-    <div id="imageInputForm">
-        <small style="font-size: smaller;">(JPEG/PNG Only)</small>
-        <input type="file" id="imageInput" accept="image/*">
-        <button id="analyzeBtn">Analyze</button>
-        <span id="status"></span>
+<header class="topbar">
+    <div class="topbar-section">
+        <div id="imageInputForm" class="control-group">
+            <input type="file" id="imageInput" accept="image/*" class="file-input">
+            <button id="analyzeBtn" class="btn primary">Analyze</button>
+            <span id="status"></span>
+        </div>
+        <button id="openSamplesBtn" class="btn">Samples</button>
     </div>
 
-    <button id="openSamplesBtn">Use Sample Image</button>
-
-    <div id="samplesModal" class="modal">
-        <div class="modal-content">
-
-            <span id="closeSamples" class="close">&times;</span>
-            <h3>Select a Sample</h3>
-
-            <div class="samples-grid">
-                {% for img in samples %}
-                <img
-                    src="/static/samples/{{ img }}"
-                    class="sample-img"
-                    data-filename="{{ img }}"
-                >
-                {% endfor %}
-            </div>
-
+    <div class="topbar-section info-section">
+        <div class="info">
+            <span class="instruction text-medium">Right-click/Long-press to measure</span>
+            <span id="distanceResult" class="text-large highlight"></span>
         </div>
     </div>
 
-    <div class="info">
-        <span style="font-size: large;">Right-click two points in 3D to measure distance</span>
-        <span id="distanceResult"></span>
+    <div class="topbar-section">
+        <div id="correctMeasureForm" class="control-group">
+            <span class="text-small label-text">Calibrate:</span>
+            <input type="number" id="correctMeasureNum" placeholder="Cm" disabled>
+            <button id="correctMeasureBtn" class="btn" disabled>Update</button>
+        </div>
     </div>
 
-    <div id="correctMeasureForm">
-        <span>Wrong measurement? Update it to adjust the measurement scale: </span>
-        <input type="number" id="correctMeasureNum" disabled>
-        <button id="correctMeasureBtn" disabled>Update</button>
+    <div id="samplesModal" class="modal">
+        <div class="modal-content">
+            <span id="closeSamples" class="close">&times;</span>
+            <h3>Select a Sample</h3>
+            <div class="samples-grid">
+                {% for img in samples %}
+                <img src="/static/samples/{{ img }}" class="sample-img" data-filename="{{ img }}" alt="{{ img }}">
+                {% endfor %}
+            </div>
+        </div>
     </div>
-</div>
+</header>
 
-<div id="viewer"></div>
+<main id="viewer"></main>
 
-<div id="footer">
-    <small style="font-size: medium;">© 2026 Abdelaziz Farahat · Depth2Metric · <a href="https://github.com/abdelazizwf/Depth2Metric" target="_blank" rel="noopener noreferrer">GitHub</a></small>
-</div>
+<footer id="footer">
+    <small class="text-medium">
+        &copy; 2026 Abdelaziz Farahat &middot; Depth2Metric &middot;
+        <a href="https://github.com/abdelazizwf/Depth2Metric" target="_blank" rel="noopener noreferrer">GitHub</a>
+    </small>
+</footer>
 
 <div id="scaleModal" class="modal">
     <div class="modal-content">
-
         <span id="closeScaleModal" class="close">&times;</span>
-
         <h3>Scene Scale Estimated</h3>
-
         <p id="scaleMessage"></p>
-
     </div>
 </div>
 
