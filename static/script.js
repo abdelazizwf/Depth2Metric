@@ -34,6 +34,7 @@ const elements = {
     analyzeBtn: document.getElementById('analyzeBtn'),
     imageInput: document.getElementById('imageInput'),
     distanceResult: document.getElementById('distanceResult'),
+    downloadBtn: document.getElementById('downloadBtn'),
 
     // Sample Modal
     samplesModal: document.getElementById('samplesModal'),
@@ -139,6 +140,8 @@ function initEventListeners() {
         if (file) handleProcessStart(() => uploadImage(file));
     });
 
+    elements.downloadBtn.addEventListener('click', downloadPLY);
+
     elements.correctMeasureBtn.addEventListener('click', updateLocalScale);
 
     // Measurement interaction (Mouse & Touch)
@@ -157,6 +160,7 @@ function initEventListeners() {
  */
 async function handleProcessStart(processFn) {
     elements.analyzeBtn.disabled = true;
+    elements.downloadBtn.disabled = true;
     elements.correctMeasureBtn.disabled = true;
     elements.correctMeasureNum.disabled = true;
     state.isMeasurementAllowed = false;
@@ -165,6 +169,7 @@ async function handleProcessStart(processFn) {
     try {
         await processFn();
         elements.status.innerText = 'Done!';
+        elements.downloadBtn.disabled = false;
     } catch (error) {
         console.error(error);
         elements.status.innerText = 'Error.';
@@ -286,6 +291,48 @@ function centerAndZoomCamera() {
     camera.lookAt(0, 0, 0);
     controls.target.set(0, 0, 0);
     controls.update();
+}
+
+/**
+ * EXPORT LOGIC
+ */
+function downloadPLY() {
+    if (!state.pointCloud) return;
+
+    const positions = state.pointCloud.geometry.attributes.position.array;
+    const colors = state.pointCloud.geometry.attributes.color.array;
+    const count = positions.length / 3;
+
+    let header = `ply
+format ascii 1.0
+element vertex ${count}
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+end_header
+`;
+
+    let body = "";
+    for (let i = 0; i < count; i++) {
+        const x = positions[i * 3 + 0];
+        const y = positions[i * 3 + 1];
+        const z = positions[i * 3 + 2];
+        const r = Math.round(colors[i * 3 + 0] * 255);
+        const g = Math.round(colors[i * 3 + 1] * 255);
+        const b = Math.round(colors[i * 3 + 2] * 255);
+        body += `${x.toFixed(4)} ${y.toFixed(4)} ${z.toFixed(4)} ${r} ${g} ${b}\n`;
+    }
+
+    const blob = new Blob([header + body], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pointcloud_${new Date().getTime()}.ply`;
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 /**
@@ -428,6 +475,7 @@ function clearScene() {
         state.pointCloud = null;
     }
     clearMeasurement();
+    elements.downloadBtn.disabled = true;
 }
 
 function updateLocalScale() {

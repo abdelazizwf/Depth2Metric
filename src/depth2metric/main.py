@@ -189,7 +189,6 @@ async def analyze(request: Request, file: UploadFile):
         headers={
             "Content-Encoding": "gzip",
             "X-Scaling-Factor": str(scale_factor),
-            "X-Scaling-Factor-Value": str(scale_factor),
             "X-Scaling-Method": scaling_method,
         },
     )
